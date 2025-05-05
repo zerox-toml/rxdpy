@@ -1,17 +1,16 @@
 [build-system]
-requires = ["flit_core >=2,<4"]
-build-backend = "flit_core.buildapi"
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
 
-[project]
-name =  "rxdpy"
-authors = [
-    {name = "zerox-toml", email = "passionkaizen96111@gmail.com"},
-]
+[tool.poetry]
+name = "rxdpy"
+version = "0.1.0"
 description = "Python SDK for Radiant (RXD), Glyphs"
+authors = ["zerox-toml <passionkaizen96111@gmail.com>"]
 readme = "README.md"
 classifiers = [
     "Development Status :: 1 - Planning",
-    "Intended Audience :: Developers",
+    "Intended Audience :: Developers", 
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.8",
@@ -19,40 +18,37 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11"
 ]
-requires-python = ">=3.8.1"
-dynamic = ["version"]
+packages = [{include = "rxdpy", from = "src"}]
 
-[project.optional-dependencies]
-spark = [
-    "pyspark>=3.0.0"
-]
-test = [
-    "bandit[toml]==1.7.5",
-    "black==23.3.0",
-    "check-manifest==0.49",
-    "flake8-bugbear==23.5.9",
-    "flake8-docstrings",
-    "flake8-formatter_junit_xml",
-    "flake8",
-    "flake8-pyproject",
-    "pre-commit==3.3.1",
-    "pylint==2.17.4",
-    "pylint_junit",
-    "pytest-cov==4.0.0",
-    "pytest-mock<3.10.1",
-    "pytest-runner",
-    "pytest==7.3.1",
-    "pytest-github-actions-annotate-failures",
-    "shellcheck-py==0.9.0.2"
-]
+[tool.poetry.dependencies]
+python = ">=3.8.1"
 
-[project.urls]
+[tool.poetry.group.spark.dependencies]
+pyspark = ">=3.0.0"
+
+[tool.poetry.group.test.dependencies]
+bandit = {version = "1.7.5", extras = ["toml"]}
+black = "23.3.0"
+check-manifest = "0.49"
+flake8-bugbear = "23.5.9"
+flake8-docstrings = "*"
+flake8-formatter_junit_xml = "*"
+flake8 = "*"
+flake8-pyproject = "*"
+pre-commit = "3.3.1"
+pylint = "2.17.4"
+pylint_junit = "*"
+pytest-cov = "4.0.0"
+pytest-mock = "<3.10.1"
+pytest-runner = "*"
+pytest = "7.3.1"
+pytest-github-actions-annotate-failures = "*"
+shellcheck-py = "0.9.0.2"
+
+[tool.poetry.urls]
 Documentation = "https://github.com/zerox-toml/rxdpy/tree/main#readme"
 Source = "https://github.com/zerox-toml/rxdpy"
 Tracker = "https://github.com/zerox-toml/rxdpy/issues"
-
-[tool.flit.module]
-name = "rxdpy"
 
 [tool.bandit]
 exclude_dirs = ["build","dist","tests","scripts"]
@@ -119,7 +115,7 @@ testpaths = "tests"
 junit_family = "xunit2"
 markers = [
     "integration: marks as integration test",
-    "notebooks: marks as notebook test",
+    "notebooks: marks as notebook test", 
     "gpu: marks as gpu test",
     "spark: marks tests which need Spark",
     "slow: marks tests as slow",
