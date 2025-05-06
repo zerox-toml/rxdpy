@@ -32,10 +32,12 @@ packages = [{include = "rxdpy", from = "src"}]
 [tool.taskipy.tasks]
 lint = "flake8 src"
 format = "black src"
+test = "pytest"
 
 [tool.poetry.dependencies]
 coincurve = "^21.0.0"
 base58 = "^2.1.1"
+pycryptodomex = "^3.22.0"
 
 [tool.poetry.group.dev.dependencies]
 taskipy = "^1.14.1"

@@ -1,7 +1,7 @@
 from typing import Union, Optional, List
 
-from bsv.constants import OpCode, OPCODE_VALUE_NAME_DICT
-from bsv.utils import encode_pushdata, unsigned_to_varint, Reader
+from ..constants import OpCode, OPCODE_VALUE_NAME_DICT
+from ..utils import encode_pushdata, unsigned_to_varint, Reader
 
 
 class ScriptChunk:
