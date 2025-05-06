@@ -1,4 +1,3 @@
-import tempfile
 import hashlib
 import hmac
 from base64 import b64encode, b64decode
@@ -6,8 +5,7 @@ from typing import Optional, Union, Callable, Tuple
 
 from coincurve import PrivateKey as CcPrivateKey, PublicKey as CcPublicKey
 
-from .aes_cbc import aes_decrypt_with_iv
-from .aes_cbc import aes_encrypt_with_iv
+from .aes_cbc import aes_decrypt_with_iv, aes_encrypt_with_iv
 from .base58 import base58check_encode
 from .constants import Network, NETWORK_ADDRESS_PREFIX_DICT, NETWORK_WIF_PREFIX_DICT, PUBLIC_KEY_COMPRESSED_PREFIX_LIST
 from .curve import Point
