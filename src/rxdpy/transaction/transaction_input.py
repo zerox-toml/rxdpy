@@ -1,3 +1,13 @@
+from typing import Optional, Union
+
+from ..constants import (
+    TRANSACTION_SEQUENCE,
+    SIGHASH,
+)
+from ..script import Script, UnlockingScriptTemplate
+from ..utils import Reader
+
+
 class TransactionInput:
     def __init__(
         self,
