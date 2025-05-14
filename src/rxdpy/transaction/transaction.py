@@ -81,6 +81,9 @@ class Transaction:
     def hex(self) -> str:  # pragma: no cover
         return self.serialize().hex()
 
+    def is_coinbase(self) -> bool:
+        return len(self.inputs) == 1 and self.inputs[0].source_txid == "00" * 32
+
     raw = hex
 
     def hash(self) -> bytes:
