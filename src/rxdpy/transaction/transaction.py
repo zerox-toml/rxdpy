@@ -2,8 +2,8 @@ import math
 from contextlib import suppress
 from typing import List, Optional, Union, Dict, Any
 
-from .broadcaster import Broadcaster, BroadcastResponse
-from .broadcasters import default_broadcaster
+# from .broadcaster import Broadcaster, BroadcastResponse
+# from .broadcasters import default_broadcaster
 
 # from .chaintracker import ChainTracker
 # from .chaintrackers import default_chain_tracker
@@ -209,10 +209,10 @@ class Transaction:
                 if out.change:
                     out.satoshis = per_output
 
-    async def broadcast(
-        self, broadcaster: Broadcaster = default_broadcaster(), check_fee: bool = True
-    ) -> BroadcastResponse:  # pragma: no cover
-        return await broadcaster.broadcast(self)
+    # async def broadcast(
+    #     self, broadcaster: Broadcaster = default_broadcaster(), check_fee: bool = True
+    # ) -> BroadcastResponse:  # pragma: no cover
+    #     return await broadcaster.broadcast(self)
 
     @classmethod
     def from_hex(cls, stream: Union[str, bytes, Reader]) -> Optional["Transaction"]:
