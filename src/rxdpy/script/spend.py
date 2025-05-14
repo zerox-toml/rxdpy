@@ -6,8 +6,8 @@ from ..constants import OpCode, OPCODE_VALUE_NAME_DICT, SIGHASH
 from ..curve import curve
 from ..hash import sha1, sha256, ripemd160, hash256, hash160
 from ..keys import PublicKey
-from ..transaction_input import TransactionInput
-from ..transaction_preimage import tx_preimage
+from ..transaction.transaction_input import TransactionInput
+from ..transaction.transaction_preimage import tx_preimage
 from ..utils import unsigned_to_bytes, deserialize_ecdsa_der
 
 MAX_SCRIPT_ELEMENT_SIZE = 1024 * 1024 * 1024
