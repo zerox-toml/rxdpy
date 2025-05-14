@@ -4,6 +4,7 @@ from typing import List, Optional, Union, Dict, Any
 
 from .broadcaster import Broadcaster, BroadcastResponse
 from .broadcasters import default_broadcaster
+
 # from .chaintracker import ChainTracker
 # from .chaintrackers import default_chain_tracker
 from ..fee_models import SatoshisPerKilobyte
@@ -18,6 +19,7 @@ from ..script.spend import Spend
 from ..script.type import P2PKH
 from .transaction_input import TransactionInput
 from .transaction_output import TransactionOutput
+
 # from ..transaction_preimage import tx_preimage
 from ..utils import unsigned_to_varint, Reader, Writer, reverse_hex_byte_order
 
@@ -27,15 +29,14 @@ class InsufficientFunds(ValueError):
 
 
 class Transaction:
-
     def __init__(
-            self,
-            tx_inputs: Optional[List[TransactionInput]] = None,
-            tx_outputs: Optional[List[TransactionOutput]] = None,
-            version: int = TRANSACTION_VERSION,
-            locktime: int = TRANSACTION_LOCKTIME,
-            merkle_path: Optional[MerklePath] = None,
-            **kwargs,
+        self,
+        tx_inputs: Optional[List[TransactionInput]] = None,
+        tx_outputs: Optional[List[TransactionOutput]] = None,
+        version: int = TRANSACTION_VERSION,
+        locktime: int = TRANSACTION_LOCKTIME,
+        merkle_path: Optional[MerklePath] = None,
+        **kwargs,
     ):
         self.inputs: List[TransactionInput] = tx_inputs or []
         self.outputs: List[TransactionOutput] = tx_outputs or []
@@ -56,9 +57,7 @@ class Transaction:
         raw += self.locktime.to_bytes(4, "little")
         return raw
 
-    def add_input(
-            self, tx_input: TransactionInput
-    ) -> "Transaction":  # pragma: no cover
+    def add_input(self, tx_input: TransactionInput) -> "Transaction":  # pragma: no cover
         if isinstance(tx_input, TransactionInput):
             self.inputs.append(tx_input)
         else:
@@ -107,16 +106,18 @@ class Transaction:
         for out in self.outputs:
             if out.satoshis is None:
                 if out.change:
-                    raise ValueError('There are still change outputs with uncomputed amounts. Use the fee() method to compute the change amounts and transaction fees prior to signing.')
+                    raise ValueError(
+                        "There are still change outputs with uncomputed amounts. Use the fee() method to compute the change amounts and transaction fees prior to signing."
+                    )
                 else:
-                    raise ValueError('One or more transaction outputs is missing an amount. Ensure all output amounts are provided before signing.')
+                    raise ValueError(
+                        "One or more transaction outputs is missing an amount. Ensure all output amounts are provided before signing."
+                    )
 
         for i in range(len(self.inputs)):
             tx_input = self.inputs[i]
             if tx_input.unlocking_script is None or not bypass:
-                tx_input.unlocking_script = tx_input.unlocking_script_template.sign(
-                    self, i
-                )
+                tx_input.unlocking_script = tx_input.unlocking_script_template.sign(self, i)
         return self
 
     def total_value_in(self) -> int:
@@ -145,38 +146,30 @@ class Transaction:
         if transaction has already signed, it will return the same value as function byte_length
         """
         estimated_length = (
-                4
-                + len(unsigned_to_varint(len(self.inputs)))
-                + len(unsigned_to_varint(len(self.outputs)))
-                + 4
+            4 + len(unsigned_to_varint(len(self.inputs))) + len(unsigned_to_varint(len(self.outputs))) + 4
         )
         for tx_input in self.inputs:
             if tx_input.unlocking_script is not None:
                 # unlocking script already set
                 estimated_length += len(tx_input.serialize())
             else:
-                estimated_length += (
-                        41
-                        + tx_input.unlocking_script_template.estimated_unlocking_byte_length()
-                )
+                estimated_length += 41 + tx_input.unlocking_script_template.estimated_unlocking_byte_length()
         for tx_output in self.outputs:
             estimated_length += (
-                    8
-                    + len(tx_output.locking_script.byte_length_varint())
-                    + tx_output.locking_script.byte_length()
+                8 + len(tx_output.locking_script.byte_length_varint()) + tx_output.locking_script.byte_length()
             )
         return estimated_length
 
     estimated_size = estimated_byte_length
 
-    def fee(self, model_or_fee=None, change_distribution='equal'):
+    def fee(self, model_or_fee=None, change_distribution="equal"):
         """
         Computes the fee for the transaction and adjusts the change outputs accordingly.
-        
+
         :param model_or_fee: Fee model or fee amount. Defaults to `SatoshisPerKilobyte` with value 10 if not provided.
         :param change_distribution: Method of change distribution ('equal' or 'random'). Defaults to 'equal'.
         """
-        
+
         if model_or_fee is None:
             model_or_fee = SatoshisPerKilobyte(int(TRANSACTION_FEE_RATE))
 
@@ -188,38 +181,36 @@ class Transaction:
         change = 0
         for tx_in in self.inputs:
             if not tx_in.source_transaction:
-                raise ValueError('Source transactions are required for all inputs during fee computation')
+                raise ValueError("Source transactions are required for all inputs during fee computation")
             change += tx_in.source_transaction.outputs[tx_in.source_output_index].satoshis
-        
+
         change -= fee
-        
+
         change_count = 0
         for out in self.outputs:
             if not out.change:
                 change -= out.satoshis
             else:
                 change_count += 1
-        
+
         if change <= change_count:
             # Not enough change to distribute among the change outputs.
             # Remove all change outputs and leave the extra for the miners.
             self.outputs = [out for out in self.outputs if not out.change]
             return
-        
+
         # Distribute change among change outputs
-        if change_distribution == 'random':
+        if change_distribution == "random":
             # TODO: Implement random distribution
-            raise NotImplementedError('Random change distribution is not yet implemented')
-        elif change_distribution == 'equal':
+            raise NotImplementedError("Random change distribution is not yet implemented")
+        elif change_distribution == "equal":
             per_output = change // change_count
             for out in self.outputs:
                 if out.change:
                     out.satoshis = per_output
 
     async def broadcast(
-            self,
-            broadcaster: Broadcaster = default_broadcaster(),
-            check_fee: bool = True
+        self, broadcaster: Broadcaster = default_broadcaster(), check_fee: bool = True
     ) -> BroadcastResponse:  # pragma: no cover
         return await broadcaster.broadcast(self)
 
@@ -238,15 +229,11 @@ class Transaction:
         stream = (
             stream
             if isinstance(stream, Reader)
-            else Reader(
-                stream if isinstance(stream, bytes) else bytes.fromhex(stream)
-            )
+            else Reader(stream if isinstance(stream, bytes) else bytes.fromhex(stream))
         )
         version = stream.read_uint32_le()
         if version != 4022206465:
-            raise ValueError(
-                f"Invalid BEEF version. Expected 4022206465, received {version}."
-            )
+            raise ValueError(f"Invalid BEEF version. Expected 4022206465, received {version}.")
 
         number_of_bumps = stream.read_var_int_num()
         bumps = []
@@ -277,9 +264,7 @@ class Transaction:
                 for tx_input in item["tx"].inputs:
                     source_obj = transactions[tx_input.source_txid]
                     if not isinstance(source_obj, dict):
-                        raise ValueError(
-                            f"Reference to unknown TXID in BUMP: {tx_input.source_txid}"
-                        )
+                        raise ValueError(f"Reference to unknown TXID in BUMP: {tx_input.source_txid}")
                     tx_input.source_transaction = source_obj["tx"]
                     add_path_or_inputs(source_obj)
 
@@ -289,13 +274,13 @@ class Transaction:
     def to_ef(self) -> bytes:
         writer = Writer()
         writer.write_uint32_le(self.version)
-        writer.write(bytes.fromhex('0000000000ef'))
+        writer.write(bytes.fromhex("0000000000ef"))
         writer.write_var_int_num(len(self.inputs))
 
         for i in self.inputs:
             if i.source_transaction is None:
-                raise ValueError('All inputs must have source transactions when serializing to EF format')
-            if i.source_txid and i.source_txid != '00' * 32:
+                raise ValueError("All inputs must have source transactions when serializing to EF format")
+            if i.source_txid and i.source_txid != "00" * 32:
                 writer.write(bytes.fromhex(reverse_hex_byte_order(i.source_txid)))
             else:
                 writer.write(i.source_transaction.hash())
@@ -326,13 +311,13 @@ class Transaction:
         txs = []
 
         def add_paths_and_inputs(tx):
-            obj = {'tx': tx}
+            obj = {"tx": tx}
             has_proof = isinstance(tx.merkle_path, MerklePath)
             if has_proof:
                 added = False
                 for i, bump in enumerate(bumps):
                     if bump == tx.merkle_path:
-                        obj['path_index'] = i
+                        obj["path_index"] = i
                         added = True
                         break
                     if bump.block_height == tx.merkle_path.block_height:
@@ -340,17 +325,17 @@ class Transaction:
                         root_b = tx.merkle_path.compute_root()
                         if root_a == root_b:
                             bump.combine(tx.merkle_path)
-                            obj['path_index'] = i
+                            obj["path_index"] = i
                             added = True
                             break
                 if not added:
-                    obj['path_index'] = len(bumps)
+                    obj["path_index"] = len(bumps)
                     bumps.append(tx.merkle_path)
             txs.insert(0, obj)
             if not has_proof:
                 for tx_input in tx.inputs:
                     if not isinstance(tx_input.source_transaction, Transaction):
-                        raise ValueError('A required source transaction is missing!')
+                        raise ValueError("A required source transaction is missing!")
                     add_paths_and_inputs(tx_input.source_transaction)
 
         add_paths_and_inputs(self)
@@ -360,16 +345,16 @@ class Transaction:
             writer.write(b.to_binary())
         writer.write_var_int_num(len(txs))
         for t in txs:
-            writer.write(t['tx'].serialize())
-            if 'path_index' in t:
+            writer.write(t["tx"].serialize())
+            if "path_index" in t:
                 writer.write_uint8(1)
-                writer.write_var_int_num(t['path_index'])
+                writer.write_var_int_num(t["path_index"])
             else:
                 writer.write_uint8(0)
         return writer.to_bytes()
 
     @classmethod
-    def from_reader(cls, reader: Reader) -> 'Transaction':
+    def from_reader(cls, reader: Reader) -> "Transaction":
         t = cls()
         t.version = reader.read_uint32_le()
         assert t.version is not None
@@ -472,14 +457,14 @@ class Transaction:
         for i in range(inputs_length):
             br.read(36)  # skip txid and vout
             script_length = br.read_var_int_num()
-            inputs.append({'vin': i, 'offset': br.tell(), 'length': script_length})
+            inputs.append({"vin": i, "offset": br.tell(), "length": script_length})
             br.read(script_length + 4)  # script and sequence
 
         outputs_length = br.read_var_int_num()
         for i in range(outputs_length):
             br.read(8)
             script_length = br.read_var_int_num()
-            outputs.append({'vout': i, 'offset': br.tell(), 'length': script_length})
+            outputs.append({"vout": i, "offset": br.tell(), "length": script_length})
             br.read(script_length)  # skip script
 
-        return {'inputs': inputs, 'outputs': outputs}
+        return {"inputs": inputs, "outputs": outputs}
