@@ -1,6 +1,6 @@
 from typing import List, Optional, TypedDict
 
-from .chaintracker import ChainTracker
+# from .chaintracker import ChainTracker
 from .hash import hash256
 from .utils import Reader, Writer, to_hex, to_bytes
 
@@ -243,20 +243,20 @@ class MerklePath:
 
         return {"offset": offset, "hash_str": working_hash}
 
-    async def verify(self, txid: str, chaintracker: ChainTracker) -> bool:
-        """
-        Verifies if the given transaction ID is part of the Merkle tree at the specified block height.
+    # async def verify(self, txid: str, chaintracker: ChainTracker) -> bool:
+    #     """
+    #     Verifies if the given transaction ID is part of the Merkle tree at the specified block height.
 
-        Args:
-            txid (str): The transaction ID to verify.
-            chaintracker (ChainTracker): The ChainTracker instance used to verify the Merkle root.
+    #     Args:
+    #         txid (str): The transaction ID to verify.
+    #         chaintracker (ChainTracker): The ChainTracker instance used to verify the Merkle root.
 
-        Returns:
-            bool: True if the transaction ID is valid within the Merkle Path at the specified block height.
-        """
-        root = self.compute_root(txid)
-        res = await chaintracker.is_valid_root_for_height(root, self.block_height)
-        return res
+    #     Returns:
+    #         bool: True if the transaction ID is valid within the Merkle Path at the specified block height.
+    #     """
+    #     root = self.compute_root(txid)
+    #     res = await chaintracker.is_valid_root_for_height(root, self.block_height)
+    #     return res
 
     def combine(self, other: "MerklePath") -> None:
         """

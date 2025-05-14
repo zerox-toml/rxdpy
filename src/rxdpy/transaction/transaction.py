@@ -4,9 +4,9 @@ from typing import List, Optional, Union, Dict, Any
 
 from .broadcaster import Broadcaster, BroadcastResponse
 from .broadcasters import default_broadcaster
-from .chaintracker import ChainTracker
-from .chaintrackers import default_chain_tracker
-from .fee_models import SatoshisPerKilobyte
+# from .chaintracker import ChainTracker
+# from .chaintrackers import default_chain_tracker
+from ..fee_models import SatoshisPerKilobyte
 from ..constants import (
     TRANSACTION_VERSION,
     TRANSACTION_LOCKTIME,
@@ -389,59 +389,59 @@ class Transaction:
         assert t.locktime is not None
         return t
 
-    async def verify(self, chaintracker: Optional[ChainTracker] = default_chain_tracker(), scripts_only=False) -> bool:
-        if self.merkle_path and not scripts_only:
-            proof_valid = await self.merkle_path.verify(self.txid(), chaintracker)
-            if proof_valid:
-                return True
+    # async def verify(self, chaintracker: Optional[ChainTracker] = default_chain_tracker(), scripts_only=False) -> bool:
+    #     if self.merkle_path and not scripts_only:
+    #         proof_valid = await self.merkle_path.verify(self.txid(), chaintracker)
+    #         if proof_valid:
+    #             return True
 
-        input_total = 0
-        for i, tx_input in enumerate(self.inputs):
-            if not tx_input.source_transaction:
-                raise ValueError(
-                    f"Verification failed because the input at index {i} of transaction {self.txid()} "
-                    f"is missing an associated source transaction. "
-                    f"This source transaction is required for transaction verification because there is no "
-                    f"merkle proof for the transaction spending a UTXO it contains.")
-            if not tx_input.unlocking_script:
-                raise ValueError(
-                    f"Verification failed because the input at index {i} of transaction {self.txid()} "
-                    f"is missing an associated unlocking script. "
-                    f"This script is required for transaction verification because there is no "
-                    f"merkle proof for the transaction spending the UTXO.")
+    #     input_total = 0
+    #     for i, tx_input in enumerate(self.inputs):
+    #         if not tx_input.source_transaction:
+    #             raise ValueError(
+    #                 f"Verification failed because the input at index {i} of transaction {self.txid()} "
+    #                 f"is missing an associated source transaction. "
+    #                 f"This source transaction is required for transaction verification because there is no "
+    #                 f"merkle proof for the transaction spending a UTXO it contains.")
+    #         if not tx_input.unlocking_script:
+    #             raise ValueError(
+    #                 f"Verification failed because the input at index {i} of transaction {self.txid()} "
+    #                 f"is missing an associated unlocking script. "
+    #                 f"This script is required for transaction verification because there is no "
+    #                 f"merkle proof for the transaction spending the UTXO.")
 
-            source_output = tx_input.source_transaction.outputs[tx_input.source_output_index]
-            input_total += source_output.satoshis
+    #         source_output = tx_input.source_transaction.outputs[tx_input.source_output_index]
+    #         input_total += source_output.satoshis
 
-            input_verified = await tx_input.source_transaction.verify(chaintracker)
-            if not input_verified:
-                return False
+    #         input_verified = await tx_input.source_transaction.verify(chaintracker)
+    #         if not input_verified:
+    #             return False
 
-            other_inputs = self.inputs[:i] + self.inputs[i + 1:]
-            spend = Spend({
-                'sourceTXID': tx_input.source_transaction.txid(),
-                'sourceOutputIndex': tx_input.source_output_index,
-                'sourceSatoshis': source_output.satoshis,
-                'lockingScript': source_output.locking_script,
-                'transactionVersion': self.version,
-                'otherInputs': other_inputs,
-                'inputIndex': i,
-                'unlockingScript': tx_input.unlocking_script,
-                'outputs': self.outputs,
-                'inputSequence': tx_input.sequence,
-                'lockTime': self.locktime,
-            })
-            spend_valid = spend.validate()
-            if not spend_valid:
-                return False
+    #         other_inputs = self.inputs[:i] + self.inputs[i + 1:]
+    #         spend = Spend({
+    #             'sourceTXID': tx_input.source_transaction.txid(),
+    #             'sourceOutputIndex': tx_input.source_output_index,
+    #             'sourceSatoshis': source_output.satoshis,
+    #             'lockingScript': source_output.locking_script,
+    #             'transactionVersion': self.version,
+    #             'otherInputs': other_inputs,
+    #             'inputIndex': i,
+    #             'unlockingScript': tx_input.unlocking_script,
+    #             'outputs': self.outputs,
+    #             'inputSequence': tx_input.sequence,
+    #             'lockTime': self.locktime,
+    #         })
+    #         spend_valid = spend.validate()
+    #         if not spend_valid:
+    #             return False
 
-        output_total = 0
-        for out in self.outputs:
-            if not out.satoshis:
-                raise ValueError("Every output must have a defined amount during transaction verification.")
-            output_total += out.satoshis
+    #     output_total = 0
+    #     for out in self.outputs:
+    #         if not out.satoshis:
+    #             raise ValueError("Every output must have a defined amount during transaction verification.")
+    #         output_total += out.satoshis
 
-        return output_total <= input_total
+    #     return output_total <= input_total
 
     @classmethod
     def parse_script_offsets(cls, octets: Union[bytes, str]) -> Dict[str, List[Dict[str, int]]]:
