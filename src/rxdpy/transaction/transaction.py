@@ -20,7 +20,7 @@ from ..script.type import P2PKH
 from .transaction_input import TransactionInput
 from .transaction_output import TransactionOutput
 
-# from ..transaction_preimage import tx_preimage
+from .transaction_preimage import tx_preimage
 from ..utils import unsigned_to_varint, Reader, Writer, reverse_hex_byte_order
 
 
@@ -92,14 +92,14 @@ class Transaction:
     def txid(self) -> str:
         return self.hash()[::-1].hex()
 
-    # def preimage(self, index: int) -> bytes:
-    #     """
-    #     :returns: digest of the input specified by index
-    #     """
-    #     assert (
-    #             0 <= index < len(self.inputs)
-    #     ), f"index out of range [0, {len(self.inputs)})"
-    #     return tx_preimage(index, self.inputs, self.outputs, self.version, self.locktime)
+    def preimage(self, index: int) -> bytes:
+        """
+        :returns: digest of the input specified by index
+        """
+        assert (
+                0 <= index < len(self.inputs)
+        ), f"index out of range [0, {len(self.inputs)})"
+        return tx_preimage(index, self.inputs, self.outputs, self.version, self.locktime)
 
     def sign(self, bypass: bool = True) -> "Transaction":  # pragma: no cover
         """
