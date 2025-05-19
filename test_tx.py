@@ -4,10 +4,13 @@ from rxdpy.script.script import Script
 from rxdpy.script.type import P2PKH, P2PK
 from rxdpy.fee_models import SatoshisPerKilobyte
 from rxdpy.constants import TRANSACTION_VERSION, TRANSACTION_LOCKTIME
+from rxdpy.hd import seed_from_mnemonic, master_xprv_from_seed
+from rxdpy.hd import bip44_derive_xprvs_from_mnemonic
+from rxdpy.constants import BIP44_DERIVATION_PATH
 
 
-def rxd_send_transaction(wifaddress, to_address, amount):
-    private_key = PrivateKey(wifaddress)
+def rxd_send_transaction(wif, to_address, amount):
+    private_key = PrivateKey(wif)
     public_key = private_key.public_key()
     public_key_hash = public_key.address()
 
@@ -63,4 +66,13 @@ def rxd_send_transaction(wifaddress, to_address, amount):
 
 
 if __name__ == "__main__":
-    rxd_send_transaction("", "", 1000000)
+    mnemonic: str = "stairs relief cost orbit comfort tuition canoe improve unique license average point"
+    seed = seed_from_mnemonic(mnemonic, lang="en")
+    master_xprv = master_xprv_from_seed(seed)
+    master_xpub = master_xprv.xpub()
+    bip44_keys = bip44_derive_xprvs_from_mnemonic(mnemonic, 0, 1, path=BIP44_DERIVATION_PATH, change=0)
+
+    print("All BIP44 derived keys:")
+    for i, key in enumerate(bip44_keys):
+        print(f"Address {i}: {key.address()}")
+        print(f"Private key {i}: {key.private_key().wif()}")
