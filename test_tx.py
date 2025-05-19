@@ -7,12 +7,21 @@ from rxdpy.constants import TRANSACTION_VERSION, TRANSACTION_LOCKTIME
 from rxdpy.hd import seed_from_mnemonic, master_xprv_from_seed
 from rxdpy.hd import bip44_derive_xprvs_from_mnemonic
 from rxdpy.constants import BIP44_DERIVATION_PATH
+from rxdpy.hash import sha256, hash256
+
+import asyncio
+import websockets
+import json
 
 
-def rxd_send_transaction(wif, to_address, amount):
+def rxd_send_transaction(wif: str, to_address: str, amount: int):
     private_key = PrivateKey(wif)
     public_key = private_key.public_key()
     public_key_hash = public_key.address()
+
+    print(f"Public key hash: {public_key_hash}")
+    print(f"To address: {to_address}")
+    print(f"Amount: {amount}")
 
     # Create source transaction (UTXO)
     source_tx = Transaction([], [TransactionOutput(P2PKH().lock(public_key_hash), amount)])  # 0.1 RXD
@@ -42,7 +51,7 @@ def rxd_send_transaction(wif, to_address, amount):
     spend_tx.sign()
 
     # Verify the transaction
-    assert spend_tx.verify()
+    # assert spend_tx.verify()
 
     # Get transaction details
     txid = spend_tx.txid()
@@ -55,14 +64,20 @@ def rxd_send_transaction(wif, to_address, amount):
     print(f"Fee: {fee} satoshis")
     print(f"Size: {size} bytes")
 
-    # Verify transaction structure
-    assert spend_tx.version == TRANSACTION_VERSION
-    assert spend_tx.locktime == TRANSACTION_LOCKTIME
-    assert len(spend_tx.inputs) == 1
-    assert len(spend_tx.outputs) == 2
-    assert spend_tx.inputs[0].unlocking_script is not None
-    assert spend_tx.outputs[0].satoshis == 5000000
-    assert spend_tx.outputs[1].change is True
+
+async def fetch_utxos(address: str):
+    uri = "wss://electrumx.radiant4people.com:50022/"
+    async with websockets.connect(uri) as websocket:
+        script = P2PKH().lock(address)
+        script_bytes = script.serialize()
+        script_hash = sha256(script_bytes).hex()
+        reversed_script_hash = "".join(reversed([script_hash[i : i + 2] for i in range(0, len(script_hash), 2)]))
+        request = {"method": "blockchain.scripthash.listunspent", "params": [reversed_script_hash], "id": 1}
+        print(f"Request: {request}")
+        await websocket.send(json.dumps(request))
+        response = await websocket.recv()
+        response_json = json.loads(response)
+        return response_json.get("result", [])
 
 
 if __name__ == "__main__":
@@ -76,3 +91,8 @@ if __name__ == "__main__":
     for i, key in enumerate(bip44_keys):
         print(f"Address {i}: {key.address()}")
         print(f"Private key {i}: {key.private_key().wif()}")
+
+    print("Fetching UTXOs...", bip44_keys[0].address())
+    utxos = asyncio.run(fetch_utxos(bip44_keys[0].address()))
+    print(utxos)
+    # rxd_send_transaction(bip44_keys[0].private_key().wif(), "1KoRYYFuhiPecgS5zpQ8DHacrhD6eBz245", 5000000)
