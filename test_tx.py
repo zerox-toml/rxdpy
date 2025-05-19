@@ -1,59 +1,69 @@
 from rxdpy.transaction.transaction import Transaction, TransactionInput, TransactionOutput
 from rxdpy.keys import PrivateKey
-from rxdpy.script.script import Script
-from rxdpy.script.type import P2PKH, P2PK
-from rxdpy.fee_models import SatoshisPerKilobyte
-from rxdpy.constants import TRANSACTION_VERSION, TRANSACTION_LOCKTIME
+from rxdpy.script.type import P2PKH
 from rxdpy.hd import seed_from_mnemonic, master_xprv_from_seed
 from rxdpy.hd import bip44_derive_xprvs_from_mnemonic
 from rxdpy.constants import BIP44_DERIVATION_PATH
-from rxdpy.hash import sha256, hash256
+from rxdpy.hash import sha256
+from rxdpy.fee_models import SatoshisPerKilobyte
 
 import asyncio
 import websockets
 import json
+import sys
+
+if sys.platform == 'win32':
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 
-def rxd_send_transaction(wif: str, to_address: str, amount: int):
+async def rxd_send_transaction(wif: str, to_address: str, amount: int):
     private_key = PrivateKey(wif)
     public_key = private_key.public_key()
-    public_key_hash = public_key.address()
+    from_address = public_key.address()
 
-    print(f"Public key hash: {public_key_hash}")
-    print(f"To address: {to_address}")
-    print(f"Amount: {amount}")
+    # Fetch UTXOs for the address
+    utxos = await fetch_utxos(from_address)
+    if not utxos:
+        raise ValueError("No UTXOs found for address")
 
-    # Create source transaction (UTXO)
-    source_tx = Transaction([], [TransactionOutput(P2PKH().lock(public_key_hash), amount)])  # 0.1 RXD
+    # Fetch relay fee
+    relay_fee = await fetch_relay_fee()
+    print(f"Relay fee: {relay_fee} satoshis")
+    # Create inputs from UTXOs
+    inputs = []
+    total_input = 0
+    for utxo in utxos:
+        source_tx = Transaction([], [TransactionOutput(P2PKH().lock(from_address), utxo["value"])])
+        source_tx.txid = lambda: utxo["tx_hash"]
+
+        inputs.append(
+            TransactionInput(
+                source_transaction=source_tx,
+                source_output_index=utxo["tx_pos"],
+                unlocking_script_template=P2PKH().unlock(private_key),
+            )
+        )
+        total_input += utxo["value"]
+
+        if total_input >= amount:
+            break
+
+    if total_input < amount:
+        raise ValueError("Insufficient funds")
 
     # Create spend transaction
     spend_tx = Transaction(
+        inputs,
         [
-            TransactionInput(
-                source_transaction=source_tx,
-                source_output_index=0,
-                unlocking_script_template=P2PKH().unlock(private_key),
-            )
-        ],
-        [
-            # Output to recipient
-            TransactionOutput(P2PKH().lock(to_address), amount),  # 0.05 RXD
-            # Change output
-            TransactionOutput(P2PKH().lock(public_key_hash), change=True),
+            TransactionOutput(P2PKH().lock(to_address), amount),
+            TransactionOutput(P2PKH().lock(from_address), change=True),
         ],
     )
 
-    # Calculate fee and adjust change output
-    fee_model = SatoshisPerKilobyte(1000)  # 1000 satoshis per kilobyte
+    fee_model = SatoshisPerKilobyte(1_000_000)
     spend_tx.fee(fee_model)
-
-    # Sign the transaction
     spend_tx.sign()
 
-    # Verify the transaction
-    # assert spend_tx.verify()
-
-    # Get transaction details
     txid = spend_tx.txid()
     raw_tx = spend_tx.hex()
     fee = spend_tx.get_fee()
@@ -63,6 +73,8 @@ def rxd_send_transaction(wif: str, to_address: str, amount: int):
     print(f"Raw transaction: {raw_tx}")
     print(f"Fee: {fee} satoshis")
     print(f"Size: {size} bytes")
+
+    return spend_tx
 
 
 async def fetch_utxos(address: str):
@@ -80,6 +92,25 @@ async def fetch_utxos(address: str):
         return response_json.get("result", [])
 
 
+async def fetch_relay_fee() -> int:
+    uri = "wss://electrumx.radiant4people.com:50022/"
+    async with websockets.connect(uri) as websocket:
+        request = {"method": "blockchain.relayfee", "params": [], "id": 1}
+        await websocket.send(json.dumps(request))
+        response = await websocket.recv()
+        response_json = json.loads(response)
+        return int(response_json.get("result", 0) * 1e8)
+
+
+async def broadcast_transaction(tx: Transaction):
+    uri = "wss://electrumx.radiant4people.com:50022/"
+    async with websockets.connect(uri) as websocket:
+        request = {"method": "blockchain.transaction.broadcast", "params": [tx.hex()], "id": 1}
+        await websocket.send(json.dumps(request))
+        response = await websocket.recv()
+        return response
+
+
 if __name__ == "__main__":
     mnemonic: str = "stairs relief cost orbit comfort tuition canoe improve unique license average point"
     seed = seed_from_mnemonic(mnemonic, lang="en")
@@ -95,4 +126,9 @@ if __name__ == "__main__":
     print("Fetching UTXOs...", bip44_keys[0].address())
     utxos = asyncio.run(fetch_utxos(bip44_keys[0].address()))
     print(utxos)
-    # rxd_send_transaction(bip44_keys[0].private_key().wif(), "1KoRYYFuhiPecgS5zpQ8DHacrhD6eBz245", 5000000)
+    tx = asyncio.run(
+        rxd_send_transaction(bip44_keys[0].private_key().wif(), "1KoRYYFuhiPecgS5zpQ8DHacrhD6eBz245", 5000000)
+    )
+    print(tx)
+    broadcast_response = asyncio.run(broadcast_transaction(tx))
+    print(broadcast_response)
